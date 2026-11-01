@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050407"><title>Pointillism Flower</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050407;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#f5eaff}body{display:flex;align-items:center;justify-content:center}.scene{position:relative;width:min(100vw,100vh);height:min(100vw,100vh);max-width:900px;max-height:900px;background:#050407;overflow:hidden}canvas{display:block;width:100%;height:100%}.top{position:absolute;top:env(safe-area-inset-top,12px);left:0;right:0;text-align:center;padding:15px 12px;pointer-events:none;text-shadow:0 2px 12px #000}.top h1{font-size:clamp(13px,3vw,18px);font-weight:400;letter-spacing:.28em;text-transform:uppercase;margin:0;opacity:.78}.controls{position:absolute;bottom:max(16px,env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:center;align-items:center;gap:10px;padding:0 12px}.controls button{border:1px solid #b78ce477;background:#160d20cc;color:#f6eaff;border-radius:999px;padding:10px 17px;font-size:13px;backdrop-filter:blur(8px);cursor:pointer}.controls button:active{transform:scale(.97)}.progress{position:absolute;left:12%;right:12%;bottom:max(66px,calc(env(safe-area-inset-bottom) + 50px));height:2px;background:#ffffff24;border-radius:4px;overflow:hidden}.bar{height:100%;width:0;background:linear-gradient(90deg,#a65bdb,#f5b9f5);box-shadow:0 0 10px #d99cff}.hint{position:absolute;bottom:max(96px,calc(env(safe-area-inset-bottom) + 80px));left:0;right:0;text-align:center;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#bda9c9aa;pointer-events:none}
+</style></head>
+<body><main class="scene"><canvas id="c" aria-label="Animación de una flor puntillista"></canvas><div class="top"><h1>Pointillism Flower</h1></div><div class="hint" id="hint">Una flor · 45 segundos</div><div class="progress"><div class="bar" id="bar"></div></div><div class="controls"><button id="play">Pausar</button><button id="restart">Reiniciar</button></div></main>
+<script>
+(()=>{'use strict';
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d',{alpha:false}),bar=document.getElementById('bar'),playBtn=document.getElementById('play'),hint=document.getElementById('hint');
+let W=700,H=700,dpr=1,clock=0,last=performance.now(),paused=false,finished=false,particles=[],soil=[],stars=[];
+const D=45,TAU=Math.PI*2;let seed=5;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}function range(a,b){return a+(b-a)*rand()}function pick(a){return a[Math.floor(rand()*a.length)]}function clamp(v,a=0,b=1){return Math.max(a,Math.min(b,v))}function smooth(a,b,x){let t=clamp((x-a)/(b-a));return t*t*(3-2*t)}
+function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=Math.max(1,Math.floor(r.width*dpr));H=Math.max(1,Math.floor(r.height*dpr));canvas.width=W;canvas.height=H;build();draw(clock)}
+const palettes={petal:['#d250e1','#aa3adf','#8032d5','#602cc4','#f59be8','#ed5bd4','#ffccf3','#ff8de6'],leaf:['#3c968c','#5078af','#8250c3','#af69d7'],soil:['#221914','#32241c','#443225','#58412f','#6c523c']};
+function build(){seed=5;particles=[];soil=[];stars=[];let s=Math.min(W,H),cx=W*.5,y0=H*.80;
+for(let i=0;i<9500;i++){let x=rand()*W,dep=Math.pow(rand(),1.5)*H*.14;soil.push({x,y:y0+dep,r:range(.65,1.5)*dpr,c:pick(palettes.soil),a:range(.18,.75)})}
+// Stem and foliage particles are stored in local coordinates and positioned each frame.
+for(let i=0;i<1800;i++){let q=rand();particles.push({type:'stem',s:q,lat:range(-1,1),r:range(.7,1.5)*dpr,c:pick(['#3e2678','#643aa5','#8c54c8','#3ca08c'])})}
+for(let j=0;j<4;j++)for(let i=0;i<420;i++){let u=Math.sqrt(rand()),v=range(-1,1);particles.push({type:'leaf',j,u,v,r:range(.65,1.35)*dpr,c:pick(palettes.leaf),rib:rand()<.08})}
+// Multi-layered petal dots, sampled across each petal's oval profile.
+const layers=[{n:8,rad:.98,count:1000},{n:6,rad:.83,count:720},{n:5,rad:.67,count:540},{n:4,rad:.49,count:350}];
+for(let l=0;l<layers.length;l++){let L=layers[l];for(let p=0;p<L.n;p++){let angle=TAU*p/L.n+ l*.31+range(-.08,.08);for(let i=0;i<L.count;i++){let u=Math.sqrt(rand()),v=range(-1,1);let edge=Math.sqrt(Math.max(0,1-v*v));let rr=L.rad*u;let x=Math.sin(angle)*rr*edge, y=-Math.cos(angle)*rr*edge;particles.push({type:'petal',x,y,z:l,angle,u,v,r:range(.65,1.5)*dpr,c:pick(palettes.petal),tw:rand()*TAU})}}}
+for(let i=0;i<600;i++){stars.push({a:range(0,TAU),r:Math.sqrt(rand()),ph:range(0,TAU),sz:range(.5,1.8)*dpr})}
+}
+function stemPoint(t, wilt, sway){let x=W*.5,y=H*.80,L=H*.38;let p0=[x,y],p1=[x-.06*L*(1-wilt)+.02*L*wilt,y-.33*L],p2=[x+.05*L*(1-wilt)+.08*L*wilt+sway*.5,y-L*(.74+.30*wilt)],p3=[x+sway+.32*L*wilt,y-L*(1-.15*wilt)];let q=1-t;return [q*q*q*p0[0]+3*q*q*t*p1[0]+3*q*t*t*p2[0]+t*t*t*p3[0],q*q*q*p0[1]+3*q*q*t*p1[1]+3*q*t*t*p2[1]+t*t*t*p3[1]]}
+function state(t){let stem=smooth(0,8,t),size=smooth(5,24,t),bloom=smooth(8,25,t),wilt=smooth(32,45,t),leaf=smooth(3,17,t)*(1-.45*wilt),glow=smooth(25,34,t)*(1-smooth(38,45,t));return {stem,size,bloom,wilt,leaf,glow}}
+function dot(x,y,r,c,a=1){ctx.globalAlpha=clamp(a);ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,Math.max(.45,r),0,TAU);ctx.fill()}
+function draw(t){if(!W||!H)return;const st=state(t),s=Math.min(W,H),cx=W*.5,y0=H*.80;ctx.fillStyle='#050407';ctx.fillRect(0,0,W,H);
+// Soil bed and tiny suspended grains
+for(const p of soil)dot(p.x,p.y,p.r,p.c,p.a);
+// stem
+if(st.stem>.005){for(const p of particles){if(p.type!=='stem'||p.s>st.stem)continue;let [x,y]=stemPoint(p.s,st.wilt,.012*H*Math.sin(t*.9)*st.stem*(1-.6*st.wilt));let width=.0085*H*(1-.3*p.s)*(1-.25*st.wilt);dot(x+p.lat*width,y,p.r,p.c,1)}
+// leaves
+const leafDefs=[[.10,1,1,.55,-.8],[.16,-1,.9,.5,-.85],[.40,1,.7,.95,-.7],[.33,-1,.62,.9,-.65]];
+for(const p of particles){if(p.type!=='leaf'||st.leaf<.02)continue;let [u0,dir,fac,a0,curve]=leafDefs[p.j];let [ax,ay]=stemPoint(u0,st.wilt,0);let u=p.u,v=p.v,LL=.19*H*fac*st.leaf*(1-.25*st.wilt),a=a0+(1-st.leaf)*.8-.6*st.wilt+curve*u;let lat=v*.27*LL*Math.sin(Math.PI*Math.pow(u,.75));let x=ax+LL*u*dir*Math.cos(a)-lat*Math.sin(a),y=ay-LL*u*Math.sin(a)-lat*dir*Math.cos(a);dot(x,y,p.r,p.rib?'#d2e6dc':p.c,1-st.wilt*.65)} }
+// flower head
+let [hx,hy]=stemPoint(1,st.wilt,.012*H*Math.sin(t*.9)*st.stem*(1-.6*st.wilt));if(st.size>.03){let angle=st.wilt*2.75+.035*Math.sin(t*.9+1)*(1-st.wilt),scale=H*.235*st.size,tilt=.2+.36*st.bloom-.4*st.wilt;
+ctx.save();ctx.translate(hx,hy);ctx.rotate(angle);ctx.scale(1,Math.max(.28,Math.cos(tilt)));
+for(const p of particles){if(p.type!=='petal')continue;let layerScale=[1,.84,.68,.49][p.z],grow=st.bloom;let x=p.x*scale*layerScale*(.24+.76*grow),y=p.y*scale*layerScale*(.24+.76*grow);let wiltDrop=st.wilt;let droop=wiltDrop*scale*.55;let col=p.c;dot(x+droop*.45,y+droop,p.r,col,clamp(.18+grow*.9-wiltDrop*.2))}
+// golden/pale center and stamens
+if(st.bloom>.28){let n=260;for(let i=0;i<n;i++){let a=i*2.39996,rr=scale*(.025+.18*Math.sqrt(i/n))*smooth(.2,.8,st.bloom);dot(Math.cos(a)*rr,Math.sin(a)*rr,range(.7,1.7)*dpr,pick(['#fff0ff','#ffd7eb','#ffe69a','#ffbe50']),1-st.wilt*.6)}}
+ctx.restore();
+// glow halo and orbiting particles
+if(st.glow>.01){let gr=ctx.createRadialGradient(hx,hy,scale*.08,hx,hy,scale*1.25);gr.addColorStop(0,`rgba(178,90,255,${.18*st.glow})`);gr.addColorStop(1,'rgba(130,45,200,0)');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(hx,hy,scale*1.25,0,TAU);ctx.fill();for(const p of stars){let life=(t*.10+p.ph)%1,rr=(.25+1.15*p.r)*scale*(.6+.6*life),x=hx+Math.cos(p.a+t*.05)*rr,y=hy+Math.sin(p.a+t*.05)*rr-life*.25*scale;dot(x,y,p.sz,p.ph%1>.5?'#ffd7fa':'#ff9be9',Math.pow(Math.sin(Math.PI*life),.8)*st.glow)}}
+}
+// falling petals during the final stage
+if(st.wilt>.03){for(let i=0;i<95;i++){let f=st.wilt,r=range(0,1),x=hx+Math.sin(i*8.17+t*.4)*H*.18*f,y=hy+H*.28*f*r;dot(x,y,range(.7,1.5)*dpr,pick(['#965680','#744068','#a77c62']),f*.7)}}
+ctx.globalAlpha=1;bar.style.width=(t/D*100)+'%';hint.textContent=t>=D?'La flor descansa':t<8?'Creciendo':t<25?'Floreciendo':t<34?'En plena floración':'El ciclo continúa';}
+function frame(now){let dt=Math.min((now-last)/1000,.05);last=now;if(!paused&&!finished){clock=Math.min(D,clock+dt);if(clock>=D){finished=true;playBtn.textContent='Reproducir'}}draw(clock);requestAnimationFrame(frame)}
+playBtn.addEventListener('click',()=>{if(finished){clock=0;finished=false;paused=false;playBtn.textContent='Pausar';return}paused=!paused;playBtn.textContent=paused?'Continuar':'Pausar'});
+document.getElementById('restart').addEventListener('click',()=>{clock=0;finished=false;paused=false;playBtn.textContent='Pausar';last=performance.now();draw(clock)});
+window.addEventListener('resize',resize);resize();requestAnimationFrame(frame);
+})();
+</script></body></html>
