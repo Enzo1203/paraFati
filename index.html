@@ -23,10 +23,10 @@ for(let i=0;i<900;i++){let u=Math.pow(rand(),0.65),
     v=range(-1,1);particles.push({type:'leaf',j,u,v,r:range(.65,1.35)*dpr,c:pick(palettes.leaf),rib:rand()<.08})}
 // Multi-layered petal dots, sampled across each petal's oval profile.
 const layers=[
-    {n:8,rad:.98,count:900},
-    {n:6,rad:.83,count:650},
-    {n:5,rad:.67,count:450},
-    {n:4,rad:.49,count:300}
+    {n:8,rad:1.15,count:850},
+    {n:7,rad:.92,count:700},
+    {n:6,rad:.70,count:550},
+    {n:5,rad:.48,count:400}
 ];
 
 for(let l=0;l<layers.length;l++){
@@ -50,12 +50,12 @@ for(let l=0;l<layers.length;l++){
                 ? 1
                 : Math.sin(k*u*.5)/(k*u*.5);
 
-            let rr=L.rad*u*Math.sin(am)*sc;
-            let hh=L.rad*u*Math.cos(am)*sc;
+            let rr=L.rad*u*1.8*Math.sin(am)*sc;
+            let hh=L.rad*u*0.8*Math.cos(am)*sc;
 
             let lat=
                 v*
-                .25*
+                .60*
                 Math.sin(Math.PI*Math.pow(u,.75));
 
             let x=
@@ -63,7 +63,7 @@ for(let l=0;l<layers.length;l++){
                 Math.sin(angle)*lat;
 
             let y=
-                hh+
+                hh*0.45+
                 Math.sin(angle)*rr+
                 Math.cos(angle)*lat;
 
@@ -76,7 +76,16 @@ for(let l=0;l<layers.length;l++){
                 u,
                 v,
                 r:range(.65,1.5)*dpr,
-                c:pick(palettes.petal),
+                petal:[
+                '#8d58f3',
+                '#9759f6',
+                '#ab63ff',
+                '#c97dff',
+                '#e587ff',
+                '#ff9ef1',
+                '#ffb6f3',
+                '#ffd1fb'
+                ], //c:pick(palettes.petal),
                 tw:rand()*TAU
             });
         }
@@ -114,7 +123,20 @@ for(const p of particles){if(p.type!=='leaf'||st.leaf<.02)continue;let [u0,dir,f
 // flower head
 let [hx,hy]=stemPoint(1,st.wilt,.012*H*Math.sin(t*.9)*st.stem*(1-.6*st.wilt));if(st.size>.03){let angle=st.wilt*2.75+.035*Math.sin(t*.9+1)*(1-st.wilt),scale=H*.235*st.size,tilt=.2+.36*st.bloom-.4*st.wilt;
 ctx.save();ctx.translate(hx,hy);ctx.rotate(angle);ctx.scale(1,Math.max(.28,Math.cos(tilt)));
-for(const p of particles){if(p.type!=='petal')continue;let layerScale=[1,.84,.68,.49][p.z],grow=st.bloom;let x=p.x*scale*layerScale*(.24+.76*grow),y=p.y*scale*layerScale*(.24+.76*grow);let wiltDrop=st.wilt;let droop=wiltDrop*scale*.55;let col=p.c;dot(x+droop*.45,y+droop,p.r,col,clamp(.18+grow*.9-wiltDrop*.2))}
+for(const p of particles){if(p.type!=='petal')continue;let layerScale=[1,.84,.68,.49][p.z],grow=st.bloom;let open = .15 + .85*grow;
+let x =
+    p.x *
+    scale *
+    layerScale *
+    open *
+    1.8;
+
+let y =
+    p.y *
+    scale *
+    layerScale *
+    open *
+    .85;let wiltDrop=st.wilt;let droop=wiltDrop*scale*.55;let col=p.c;dot(x+droop*.45,y+droop,p.r,col,clamp(.18+grow*.9-wiltDrop*.2))}
 // golden/pale center and stamens
 if(st.bloom>.28){let n=1200;for(let i=0;i<n;i++){let a=i*2.39996,rr=scale*(.025+.18*Math.sqrt(i/n))*smooth(.2,.8,st.bloom);dot(Math.cos(a)*rr,Math.sin(a)*rr,range(.7,1.7)*dpr,pick([
  '#fff0ff',
