@@ -15,18 +15,103 @@ const D=45,TAU=Math.PI*2;let seed=5;function rand(){seed=(seed*1664525+101390422
 function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=Math.max(1,Math.floor(r.width*dpr));H=Math.max(1,Math.floor(r.height*dpr));canvas.width=W;canvas.height=H;build();draw(clock)}
 const palettes={petal:['#d250e1','#aa3adf','#8032d5','#602cc4','#f59be8','#ed5bd4','#ffccf3','#ff8de6'],leaf:['#3c968c','#5078af','#8250c3','#af69d7'],soil:['#221914','#32241c','#443225','#58412f','#6c523c']};
 function build(){seed=5;particles=[];soil=[];stars=[];let s=Math.min(W,H),cx=W*.5,y0=H*.80;
-for(let i=0;i<9500;i++){let x=rand()*W,dep=Math.pow(rand(),1.5)*H*.14;soil.push({x,y:y0+dep,r:range(.65,1.5)*dpr,c:pick(palettes.soil),a:range(.18,.75)})}
+for(let i=0;i<26000;i++){let x=rand()*W,dep=Math.pow(rand(),1.5)*H*.14;soil.push({x,y:y0+dep,r:range(.65,1.5)*dpr,c:pick(palettes.soil),a:range(.18,.75)})}
 // Stem and foliage particles are stored in local coordinates and positioned each frame.
 for(let i=0;i<1800;i++){let q=rand();particles.push({type:'stem',s:q,lat:range(-1,1),r:range(.7,1.5)*dpr,c:pick(['#3e2678','#643aa5','#8c54c8','#3ca08c'])})}
-for(let j=0;j<4;j++)for(let i=0;i<420;i++){let u=Math.sqrt(rand()),v=range(-1,1);particles.push({type:'leaf',j,u,v,r:range(.65,1.35)*dpr,c:pick(palettes.leaf),rib:rand()<.08})}
+for(let j=0;j<4;j++)
+for(let i=0;i<900;i++){let u=Math.pow(rand(),0.65),
+    v=range(-1,1);particles.push({type:'leaf',j,u,v,r:range(.65,1.35)*dpr,c:pick(palettes.leaf),rib:rand()<.08})}
 // Multi-layered petal dots, sampled across each petal's oval profile.
-const layers=[{n:8,rad:.98,count:1000},{n:6,rad:.83,count:720},{n:5,rad:.67,count:540},{n:4,rad:.49,count:350}];
-for(let l=0;l<layers.length;l++){let L=layers[l];for(let p=0;p<L.n;p++){let angle=TAU*p/L.n+ l*.31+range(-.08,.08);for(let i=0;i<L.count;i++){let u=Math.sqrt(rand()),v=range(-1,1);let edge=Math.sqrt(Math.max(0,1-v*v));let rr=L.rad*u;let x=Math.sin(angle)*rr*edge, y=-Math.cos(angle)*rr*edge;particles.push({type:'petal',x,y,z:l,angle,u,v,r:range(.65,1.5)*dpr,c:pick(palettes.petal),tw:rand()*TAU})}}}
-for(let i=0;i<600;i++){stars.push({a:range(0,TAU),r:Math.sqrt(rand()),ph:range(0,TAU),sz:range(.5,1.8)*dpr})}
+const layers=[
+    {n:8,rad:.98,count:2200},
+    {n:6,rad:.83,count:1800},
+    {n:5,rad:.67,count:1300},
+    {n:4,rad:.49,count:900}
+];
+
+for(let l=0;l<layers.length;l++){
+
+    let L=layers[l];
+
+    for(let p=0;p<L.n;p++){
+
+        let angle=TAU*p/L*n+l*.31+range(-.08,.08);
+
+        for(let i=0;i<L.count;i++){
+
+            let u=Math.sqrt(rand());
+            let v=range(-1,1);
+
+            let k=-1.1;
+
+            let am=.60+k*u*.5;
+
+            let sc=Math.abs(k*u*.5)<0.0001
+                ? 1
+                : Math.sin(k*u*.5)/(k*u*.5);
+
+            let rr=L.rad*u*Math.sin(am)*sc;
+            let hh=L.rad*u*Math.cos(am)*sc;
+
+            let lat=
+                v*
+                .25*
+                Math.sin(Math.PI*Math.pow(u,.75));
+
+            let x=
+                Math.cos(angle)*rr-
+                Math.sin(angle)*lat;
+
+            let y=
+                hh+
+                Math.sin(angle)*rr+
+                Math.cos(angle)*lat;
+
+            particles.push({
+                type:'petal',
+                x,
+                y,
+                z:l,
+                angle,
+                u,
+                v,
+                r:range(.65,1.5)*dpr,
+                c:pick(palettes.petal),
+                tw:rand()*TAU
+            });
+        }
+    }
+}
+for(let i=0;i<2500;i++){stars.push({a:range(0,TAU),r:Math.sqrt(rand()),ph:range(0,TAU),sz:range(.5,1.8)*dpr})}
 }
 function stemPoint(t, wilt, sway){let x=W*.5,y=H*.80,L=H*.38;let p0=[x,y],p1=[x-.06*L*(1-wilt)+.02*L*wilt,y-.33*L],p2=[x+.05*L*(1-wilt)+.08*L*wilt+sway*.5,y-L*(.74+.30*wilt)],p3=[x+sway+.32*L*wilt,y-L*(1-.15*wilt)];let q=1-t;return [q*q*q*p0[0]+3*q*q*t*p1[0]+3*q*t*t*p2[0]+t*t*t*p3[0],q*q*q*p0[1]+3*q*q*t*p1[1]+3*q*t*t*p2[1]+t*t*t*p3[1]]}
 function state(t){let stem=smooth(0,8,t),size=smooth(5,24,t),bloom=smooth(8,25,t),wilt=smooth(32,45,t),leaf=smooth(3,17,t)*(1-.45*wilt),glow=smooth(25,34,t)*(1-smooth(38,45,t));return {stem,size,bloom,wilt,leaf,glow}}
-function dot(x,y,r,c,a=1){ctx.globalAlpha=clamp(a);ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,Math.max(.45,r),0,TAU);ctx.fill()}
+function dot(x,y,r,c,a=1){
+
+    let g=ctx.createRadialGradient(
+        x,y,0,
+        x,y,r*1.8
+    );
+
+    g.addColorStop(0,c);
+    g.addColorStop(1,'rgba(0,0,0,0)');
+
+    ctx.globalAlpha=clamp(a);
+
+    ctx.fillStyle=g;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        x,
+        y,
+        Math.max(.45,r*1.4),
+        0,
+        TAU
+    );
+
+    ctx.fill();
+}
 function draw(t){if(!W||!H)return;const st=state(t),s=Math.min(W,H),cx=W*.5,y0=H*.80;ctx.fillStyle='#050407';ctx.fillRect(0,0,W,H);
 // Soil bed and tiny suspended grains
 for(const p of soil)dot(p.x,p.y,p.r,p.c,p.a);
@@ -40,7 +125,14 @@ let [hx,hy]=stemPoint(1,st.wilt,.012*H*Math.sin(t*.9)*st.stem*(1-.6*st.wilt));if
 ctx.save();ctx.translate(hx,hy);ctx.rotate(angle);ctx.scale(1,Math.max(.28,Math.cos(tilt)));
 for(const p of particles){if(p.type!=='petal')continue;let layerScale=[1,.84,.68,.49][p.z],grow=st.bloom;let x=p.x*scale*layerScale*(.24+.76*grow),y=p.y*scale*layerScale*(.24+.76*grow);let wiltDrop=st.wilt;let droop=wiltDrop*scale*.55;let col=p.c;dot(x+droop*.45,y+droop,p.r,col,clamp(.18+grow*.9-wiltDrop*.2))}
 // golden/pale center and stamens
-if(st.bloom>.28){let n=260;for(let i=0;i<n;i++){let a=i*2.39996,rr=scale*(.025+.18*Math.sqrt(i/n))*smooth(.2,.8,st.bloom);dot(Math.cos(a)*rr,Math.sin(a)*rr,range(.7,1.7)*dpr,pick(['#fff0ff','#ffd7eb','#ffe69a','#ffbe50']),1-st.wilt*.6)}}
+if(st.bloom>.28){let n=1200;for(let i=0;i<n;i++){let a=i*2.39996,rr=scale*(.025+.18*Math.sqrt(i/n))*smooth(.2,.8,st.bloom);dot(Math.cos(a)*rr,Math.sin(a)*rr,range(.7,1.7)*dpr,pick([
+ '#fff0ff',
+ '#ffe8fa',
+ '#ffd7eb',
+ '#ffe69a',
+ '#ffbe50',
+ '#d796ff'
+]),1-st.wilt*.6)}}
 ctx.restore();
 // glow halo and orbiting particles
 if(st.glow>.01){let gr=ctx.createRadialGradient(hx,hy,scale*.08,hx,hy,scale*1.25);gr.addColorStop(0,`rgba(178,90,255,${.18*st.glow})`);gr.addColorStop(1,'rgba(130,45,200,0)');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(hx,hy,scale*1.25,0,TAU);ctx.fill();for(const p of stars){let life=(t*.10+p.ph)%1,rr=(.25+1.15*p.r)*scale*(.6+.6*life),x=hx+Math.cos(p.a+t*.05)*rr,y=hy+Math.sin(p.a+t*.05)*rr-life*.25*scale;dot(x,y,p.sz,p.ph%1>.5?'#ffd7fa':'#ff9be9',Math.pow(Math.sin(Math.PI*life),.8)*st.glow)}}
